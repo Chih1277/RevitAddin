@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 
@@ -10,13 +11,20 @@ namespace RevitAddin
 {
     class LBeacon
     {
-        public LBeacon(FamilyInstance fi)
+        public LBeacon(Element beacon, XYZ location)
         {
-            Parameter mark = fi.LookupParameter("Mark");
-            if (mark != null)
-            {
-                TaskDialog.Show("Mark", GetParameterValue(mark));
-            }
+            Parameter mark = beacon.LookupParameter("Mark");
+            Mark = GetParameterValue(mark);
+            XLocation = location.X;
+            YLocation = location.Y;
+            Level = beacon.Document.GetElement(beacon.LevelId).Name;
+            LocationPoint locationPoint = beacon.Location as LocationPoint;
+            Region = locationPoint.ToString();
+        }
+
+        public string Region
+        {
+            get; private set;
         }
 
         public string Mark
@@ -49,7 +57,12 @@ namespace RevitAddin
             get; private set;
         }
 
-        private string GetParameterValue(Parameter parameter)
+        public string Neighbors
+        {
+            get; private set;
+        }
+
+        public static string GetParameterValue(Parameter parameter)
         {
             switch (parameter.StorageType)
             {
@@ -66,6 +79,17 @@ namespace RevitAddin
                 default:
                     return "";
             }
+        }
+
+        public XmlElement ToXmlElement(XmlDocument document)
+        {
+            XmlElement node = document.CreateElement("node");
+            node.SetAttribute("id", this.GUID);
+            node.SetAttribute("region", this.Region);
+            node.SetAttribute("lat", this.YLocation.ToString());
+            node.SetAttribute("lon", this.XLocation.ToString());
+            node.SetAttribute("elevation", this.Level);
+            return node;
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
@@ -14,6 +15,7 @@ namespace RevitAddin
     [Regeneration(RegenerationOption.Manual)]
     public class Class1 : IExternalCommand
     {
+        private List<LBeacon> _lBeacons = new List<LBeacon>();
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             UIApplication uiapp = commandData.Application;
@@ -24,7 +26,7 @@ namespace RevitAddin
             SiteLocation site = doc.SiteLocation;
             double projectLongitude = site.Longitude * angleConvert;
             double projectLatitude = site.Latitude * angleConvert;
-            XYZ location = new XYZ(projectLongitude, projectLatitude, 0);
+            XYZ projectLocation = new XYZ(projectLongitude, projectLatitude, 0);
 
             Selection sel = uidoc.Selection;
             Reference reference = sel.PickObject(ObjectType.Element);
@@ -33,17 +35,13 @@ namespace RevitAddin
             Parameter mark = element.LookupParameter("Mark");
             LocationPoint lp = element.Location as LocationPoint;
             XYZ startPoint = new XYZ(lp.Point.X, lp.Point.Y, lp.Point.Z);
+            _lBeacons.Add(new LBeacon(element, projectLocation));
 
             using (Transaction t = new Transaction(doc, "parameter"))
             {
                 t.Start("parameter");
                 comment.Set("Selected");
-
-                if (GetParameterValue(comment) != "Selected")
-                {
-                    TextNote.Create(doc, uidoc.ActiveView.Id, startPoint, GetParameterValue(mark), doc.GetDefaultElementTypeId(ElementTypeGroup.TextNoteType));
-                }
-
+                TextNote.Create(doc, uidoc.ActiveView.Id, startPoint, LBeacon.GetParameterValue(mark), doc.GetDefaultElementTypeId(ElementTypeGroup.TextNoteType));
                 t.Commit();
             }
 
@@ -52,6 +50,7 @@ namespace RevitAddin
             lp = element.Location as LocationPoint;
             XYZ endPoint = new XYZ(lp.Point.X, lp.Point.Y, lp.Point.Z);
             comment = element.LookupParameter("Comments");
+            _lBeacons.Add(new LBeacon(element, projectLocation));
 
             using (Transaction t = new Transaction(doc, "line"))
             {
@@ -62,26 +61,23 @@ namespace RevitAddin
                 t.Commit();
             }
 
+            WriteXml();
+         
             return Result.Succeeded;
         }
 
-        public string GetParameterValue(Parameter parameter)
+        private void WriteXml()
         {
-            switch (parameter.StorageType)
+            XmlDocument xmlDocument = new XmlDocument();
+            XmlElement building = xmlDocument.CreateElement("Building");
+            xmlDocument.AppendChild(building);
+            XmlElement region = xmlDocument.CreateElement("region");
+            building.AppendChild(region);
+            foreach (LBeacon beacon in _lBeacons)
             {
-                case StorageType.Double:
-                    return parameter.AsValueString();
-                case StorageType.ElementId:
-                    return parameter.AsElementId().IntegerValue.ToString();
-                case StorageType.Integer:
-                    return parameter.AsValueString();
-                case StorageType.None:
-                    return parameter.AsValueString();
-                case StorageType.String:
-                    return parameter.AsString();
-                default:
-                    return "";
+                region.AppendChild(beacon.ToXmlElement(xmlDocument));
             }
+            xmlDocument.Save(Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "\\Building.xml");
         }
     }
 }
