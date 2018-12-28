@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <RevitAddIns>
   <AddIn Type="Command">
-    <Name>Test</Name>
-    <FullClassName>RevitAddin.Class1</FullClassName>
-    <Text>Test</Text>
-    <Description>Place the Group at Particular Point</Description>
+    <Name>Connect</Name>
+    <FullClassName>RevitAddin.Connection</FullClassName>
+    <Text>Connect</Text>
+    <Description>Connect selected LBeacons.</Description>
     <VisibilityMode>AlwaysVisible</VisibilityMode>
     <Assembly>C:\Users\Marco\source\repos\RevitAddin\RevitAddin\bin\Debug\RevitAddin.dll</Assembly>
     <AddInId>239BD853-36E4-461f-9171-C5ACEDA4E723</AddInId>
